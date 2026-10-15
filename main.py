@@ -1,142 +1,242 @@
-import streamlit as st
+import math
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
+import streamlit as st
 
-# ==========================================
-# 1. 페이지 기본 설정 및 제목 표시
-# ==========================================
+# ------------------------------------------------------------------------------
+# 1. 스트림릿 페이지 기본 설정 (페이지 제목, 레이아웃 등)
+# ------------------------------------------------------------------------------
 st.set_page_config(
     page_title="동네별 인구 피라미드",
-    page_icon="👨‍👩‍👧‍👦",
-    layout="wide"
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# 앱 제목 및 설명 문구
-st.title("👨‍👩‍👧‍👦 동네별 인구 피라미드")
-st.caption("전국 읍·면·동의 최신 연도 인구 구조를 피라미드 그래프로 확인해보세요.")
+# 따뜻한 톤을 위한 간단한 Custom CSS 스타일 적용
+st.markdown("""
+    <style>
+    /* 전체 배경색을 따뜻한 아이보리 톤으로 설정 */
+    .main {
+        background-color: #FDFBF7;
+    }
+    /* 카드 및 메트릭 박스 스타일링 */
+    div[data-testid="stMetric"] {
+        background-color: #FFFFFF;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        border: 1px solid #F0EAE1;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 
-# ==========================================
-# 2. 데이터 불러오기 (캐싱 처리로 로딩 속도 최적화)
-# ==========================================
+# ------------------------------------------------------------------------------
+# 2. 데이터 로드 및 캐싱 (속도 최적화)
+# ------------------------------------------------------------------------------
 @st.cache_data
-def load_data():
-    # GitHub 웹페이지 주소를 pandas가 읽을 수 있는 Raw 링크로 변환합니다.
-    url = "https://github.com/keunyoo75750909/population/blob/main/population_ts_yearly_gender.zip"
-    raw_url = url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+def load_population_data():
+    """
+    GitHub에 업로드된 압축 CSV 파일을 판다스로 직접 읽어옵니다.
+    GitHub의 'blob' URL 대신 직접 파일 데이터를 가져올 수 있는 'raw' URL을 사용합니다.
+    """
+    # GitHub Raw 링크 주소 (zip 파일도 pandas가 자동으로 압축을 해제하고 읽습니다)
+    raw_url = "https://raw.githubusercontent.com/keunyoo75750909/population/main/population_ts_yearly_gender.zip"
     
-    # 압축된 CSV 파일 읽기
+    # CSV 데이터 읽기
     df = pd.read_csv(raw_url)
     
-    # 데이터셋 내 가장 최신 연도만 선택
-    latest_year = df["연도"].max()
-    df_latest = df[df["연도"] == latest_year].copy()
+    # 가장 최신 연도만 추출 (예: 2026년)
+    latest_year = int(df['연도'].max())
+    df_latest = df[df['연도'] == latest_year].copy()
     
     return df_latest, latest_year
 
-# 데이터 로딩 실행
-with st.spinner("최신 인구 데이터를 불러오는 중입니다..."):
-    df, latest_year = load_data()
-
-st.sidebar.info(f"📅 기준 연도: **{latest_year}년**")
+# 데이터 로딩 진행 상태 표시
+with st.spinner("인구 데이터를 불러오는 중입니다..."):
+    df, latest_year = load_population_data()
 
 
-# ==========================================
-# 3. 나이 라벨 및 성별 열(Column) 이름 추출
-# ==========================================
-# '남_'으로 시작하는 열을 찾아 0세부터 100세 이상까지의 나이 순서를 파악합니다.
-male_cols = [c for c in df.columns if c.startswith("남_")]
-
-# '남_' 접두사를 제거하여 나이 라벨 리스트 생성 ('0세', '1세', ..., '100세 이상')
-age_labels = [c.replace("남_", "") for c in male_cols]
-
-# 나이 라벨에 대응하는 여성 데이터 열 이름 생성 ('여_0세', '여_1세', ...)
-female_cols = [f"여_{age}" for age in age_labels]
+# ------------------------------------------------------------------------------
+# 3. 앱 타이틀 및 안내 문구
+# ------------------------------------------------------------------------------
+st.title("🏡 우리 동네 인구 피라미드")
+st.markdown(f"**{latest_year}년 최신 데이터** 기준 전국 읍·면·동별 연령 및 성별 인구 구조를 확인해 보세요.")
+st.divider()
 
 
-# ==========================================
-# 4. 지역 선택 드롭다운 (시도 -> 시군구 -> 동)
-# ==========================================
+# ------------------------------------------------------------------------------
+# 4. 상단 드롭다운 메뉴 (시도 → 시군구 → 동 3단계 연동)
+# ------------------------------------------------------------------------------
 st.subheader("📍 지역 선택")
 
-# 화면 상단에 드롭다운 3개를 가로 1줄로 배치
-col1, col2, col3 = st.columns(3)
+col_sido, col_sigungu, col_dong = st.columns(3)
 
-# 1) 시·도 선택
-with col1:
-    sido_list = sorted(df["시도"].dropna().unique())
-    selected_sido = st.selectbox("시·도 선택", sido_list)
+# 1) 시도 선택
+with col_sido:
+    sido_list = sorted(df['시도'].dropna().unique())
+    selected_sido = st.selectbox("1. 시·도 선택", sido_list)
 
-# 선택된 시·도 데이터 필터링
-df_sido = df[df["시도"] == selected_sido]
+# 2) 시군구 선택 (선택된 시도에 해당하는 데이터만 필터링)
+df_sido = df[df['시도'] == selected_sido]
+with col_sigungu:
+    sigungu_list = sorted(df_sido['시군구'].dropna().unique())
+    selected_sigungu = st.selectbox("2. 시·군·구 선택", sigungu_list)
 
-# 2) 시·군·구 선택
-with col2:
-    sigungu_list = sorted(df_sido["시군구"].dropna().unique())
-    selected_sigungu = st.selectbox("시·군·구 선택", sigungu_list)
-
-# 선택된 시·군·구 데이터 필터링 (오류가 난 부분을 df_sido 참조로 수정)
-df_sigungu = df_sido[df_sido["시군구"] == selected_sigungu]
-
-# 3) 읍·면·동 선택
-with col3:
-    dong_list = sorted(df_sigungu["동"].dropna().unique())
-    selected_dong = st.selectbox("읍·면·동 선택", dong_list)
-
-# 최종 선택된 동네 데이터 필터링
-selected_data = df_sigungu[df_sigungu["동"] == selected_dong]
+# 3) 동 선택 (선택된 시도 및 시군구에 해당하는 데이터만 필터링)
+df_sigungu = df_sido[df_sido['시군구'] == selected_sigungu]
+with col_dong:
+    dong_list = sorted(df_sigungu['동'].dropna().unique())
+    selected_dong = st.selectbox("3. 읍·면·동 선택", dong_list)
 
 
-# ==========================================
-# 5. 인구 피라미드 그래프 그리기
-# ==========================================
+# ------------------------------------------------------------------------------
+# 5. 선택한 동네의 데이터 추출 및 가공
+# ------------------------------------------------------------------------------
+selected_data = df_sigungu[df_sigungu['동'] == selected_dong]
+
 if not selected_data.empty:
-    # 선택한 지역의 1행 데이터에서 남성/여성 나이별 인구수 추출
     row = selected_data.iloc[0]
-    male_pop = [int(row[col]) for col in male_cols]
-    female_pop = [int(row[col]) for col in female_cols]
-
-    # 총 인구수 계산
-    total_male = sum(male_pop)
-    total_female = sum(female_pop)
-    total_pop = total_male + total_female
-
-    # 동네 인구 현황 요약 카드 출력
-    st.markdown("---")
-    st.subheader(f"📊 {selected_sido} {selected_sigungu} {selected_dong} 인구 현황")
     
-    m_col1, m_col2, m_col3 = st.columns(3)
-    m_col1.metric("총 인구수", f"{total_pop:,} 명")
-    m_col2.metric("남성 인구수", f"{total_male:,} 명")
-    m_col3.metric("여성 인구수", f"{total_female:,} 명")
+    # 나이 라벨 생성: '0세', '1세', ..., '99세', '100세 이상'
+    # 세로축의 아래(0세)부터 위(100세 이상)로 쌓일 순서입니다.
+    age_labels = [f"{i}세" for i in range(100)] + ["100세 이상"]
+    
+    # 남/여 나이별 인구수 컬럼 이름 생성 후 값 가져오기
+    male_cols = [f"남_{age}" for age in age_labels]
+    female_cols = [f"여_{age}" for age in age_labels]
+    
+    male_counts = [row[col] if col in row else 0 for col in male_cols]
+    female_counts = [row[col] if col in row else 0 for col in female_cols]
+    
+    # 피라미드 그래프 작성을 위해 남자 인구수는 음수(-)로 변환
+    male_x = [-x for x in male_counts]
+    female_x = female_counts
 
-    # 남성 인구수는 왼쪽 배치를 위해 음수(-) 값으로 변환
-    male_pop_neg = [-val for val in male_pop]
+    # 요약 정보 계산
+    total_male = sum(male_counts)
+    total_female = sum(female_counts)
+    total_pop = total_male + total_female
+    
+    st.write("") # 간격 조정
+    
+    # 요약 메트릭 표시
+    m1, m2, m3 = st.columns(3)
+    m1.metric("총 인구수", f"{total_pop:,} 명")
+    m2.metric("남성 인구수", f"{total_male:,} 명", f"{total_male/total_pop*100:.1f}%" if total_pop > 0 else "0%")
+    m3.metric("여성 인구수", f"{total_female:,} 명", f"{total_female/total_pop*100:.1f}%" if total_pop > 0 else "0%")
+    
+    st.divider()
 
-    # Plotly 시각화 객체 생성
+    # --------------------------------------------------------------------------
+    # 6. X축 눈금(Tick) 깔끔하게 정렬하는 함수
+    # --------------------------------------------------------------------------
+    def get_nice_ticks(max_val):
+        """
+        음수/양수로 이루어진 X축 눈금을 양수 표기로 깔끔하게 보기 위해 계산하는 함수입니다.
+        """
+        if max_val == 0:
+            return [-10, 0, 10], ["10", "0", "10"]
+        
+        # 눈금 간격 단위 계산
+        raw_step = max_val / 4
+        magnitude = 10 ** math.floor(math.log10(raw_step)) if raw_step > 0 else 1
+        residual = raw_step / magnitude
+        
+        if residual > 5:
+            step = 10 * magnitude
+        elif residual > 2:
+            step = 5 * magnitude
+        elif residual > 1:
+            step = 2 * magnitude
+        else:
+            step = magnitude
+            
+        step = int(max(1, step))
+        num_steps = math.ceil(max_val / step)
+        
+        vals = [i * step for i in range(-num_steps, num_steps + 1)]
+        texts = [f"{abs(v):,}" for v in vals]
+        return vals, texts
+
+    max_population = max(max(male_counts), max(female_counts))
+    x_vals, x_texts = get_nice_ticks(max_population)
+
+    # --------------------------------------------------------------------------
+    # 7. Plotly 인구 피라미드 그래프 작성 (따뜻한 톤)
+    # --------------------------------------------------------------------------
     fig = go.Figure()
 
-    # 남성 막대 그래프 (왼쪽 배치, 따뜻한 슬레이트 블루)
+    # 남자 막대 (왼쪽, 음수값) - 따뜻한 슬레이트 블루 톤 (#4A6984)
     fig.add_trace(go.Bar(
         y=age_labels,
-        x=male_pop_neg,
-        name="남성",
-        orientation="h",
-        marker=dict(color="#4A6FA5"),
-        hovertemplate="<b>%{y}</b><br>남성 인구: %{customdata:,}명<extra></extra>",
-        customdata=male_pop  # 마우스 호버(툴팁) 시에는 양수 값으로 표시
+        x=male_x,
+        name='남자',
+        orientation='h',
+        marker_color='#4A6984',
+        customdata=male_counts,
+        hovertemplate='<b>%{y}</b><br>남자 인구: %{customdata:,}명<extra></extra>'
     ))
 
-    # 여성 막대 그래프 (오른쪽 배치, 따뜻한 로즈 테라코타)
+    # 여자 막대 (오른쪽, 양수값) - 따뜻한 코랄 오렌지 톤 (#E07A5F)
     fig.add_trace(go.Bar(
         y=age_labels,
-        x=female_pop,
-        name="여성",
-        orientation="h",
-        marker=dict(color="#E07A5F"),
-        hovertemplate="<b>%{y}</b><br>여성 인구: %{x:,}명<extra></extra>"
+        x=female_x,
+        name='여자',
+        orientation='h',
+        marker_color='#E07A5F',
+        customdata=female_counts,
+        hovertemplate='<b>%{y}</b><br>여자 인구: %{customdata:,}명<extra></extra>'
     ))
 
-    # X축(인구수) 눈금을 양수로 대칭 표기하기 위한 설정
-    max_val = max(max(male_pop, default=1), max(female_pop, default=1))
-    step = max(1, int(max_val /
+    # 그래프 레이아웃 세부 설정
+    fig.update_layout(
+        title=dict(
+            text=f"<b>[{selected_sido} {selected_sigungu} {selected_dong}]</b> 인구 피라미드 ({latest_year}년)",
+            font=dict(size=22, color="#2B2D42")
+        ),
+        barmode='overlay', # 두 막대를 좌우로 교차 배치
+        bargap=0.05,       # 막대 간격 최소화
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='#FDFBF7', # 차트 배경을 따뜻한 아이보리로 설정
+        
+        # X축 설정 (음수 값을 양수 명수로 표시)
+        xaxis=dict(
+            title="<b>인구수 (명)</b>",
+            tickvals=x_vals,
+            ticktext=x_texts,
+            gridcolor='#EAE0D5',
+            zerolinecolor='#8D99AE',
+            zerolinewidth=1.5
+        ),
+        
+        # [핵심] Y축 설정: 0세부터 100세 이상 순서 그대로 고정 (맨 아래 0세, 맨 위 100세 이상)
+        yaxis=dict(
+            title="<b>나이</b>",
+            type='category',
+            categoryorder='array',
+            categoryarray=age_labels, # 배열의 첫번째 요소('0세')가 가장 아래에 배치됨
+            gridcolor='#EAE0D5'
+        ),
+        
+        # 범례(Legend) 설정
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=14)
+        ),
+        
+        height=1000, # 100개 연령대가 시원하게 보이도록 높이 지정
+        margin=dict(l=60, r=60, t=100, b=60)
+    )
+
+    # 스트림릿 화면에 그래프 출력
+    st.plotly_chart(fig, use_container_width=True)
+
+else:
+    st.warning("선택하신 지역의 인구 데이터가 존재하지 않습니다.")
