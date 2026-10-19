@@ -15,76 +15,110 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------------------------
-# 2. 감각적인 어두운 파스텔 톤 Custom CSS
+# 2. 고대비 텍스트 & 피라미드 은은한 글로우(Glow) Custom CSS
 # ------------------------------------------------------------------------------
 st.markdown("""
     <style>
-    /* 전체 배경: 어두운 파스텔 딥 슬레이트 그라데이션 */
+    /* 전체 배경: 어두운 파스텔 딥 슬레이트 */
     .stApp {
-        background: linear-gradient(135deg, #13151E 0%, #1A1D28 50%, #222636 100%);
-        color: #E2E8F0;
+        background: linear-gradient(135deg, #12141D 0%, #181B26 50%, #1E2230 100%);
+        color: #F8FAFC !important;
     }
     
-    /* 타이틀 그라데이션 포인트 */
+    /* 일반 라벨 및 마크다운 텍스트 선명도 보정 */
+    p, span, label, h1, h2, h3, h4, h5, h6 {
+        color: #F1F5F9 !important;
+    }
+    
+    /* 메인 타이틀 */
     .main-title {
         font-size: 2.3rem;
         font-weight: 800;
-        background: linear-gradient(90deg, #A855F7, #EC4899, #6366F1);
+        background: linear-gradient(90deg, #C084FC, #F472B6, #818CF8);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 0.3rem;
     }
     .sub-title {
-        color: #94A3B8;
+        color: #CBD5E1 !important;
         font-size: 1.05rem;
         margin-bottom: 1.5rem;
     }
 
-    /* 상단 지표 카드: 글래스모피즘 & 호버 모션 */
+    /* 드롭다운(Selectbox) 글씨 선명도 및 배경 보정 */
+    div[data-baseweb="select"] > div {
+        background-color: #262B3D !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 10px !important;
+    }
+    div[data-baseweb="select"] * {
+        color: #FFFFFF !important;
+    }
+    /* 드롭다운 클릭 시 메뉴 목록 스타일 */
+    ul[data-baseweb="menu"] {
+        background-color: #262B3D !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    li[data-baseweb="option"] {
+        color: #FFFFFF !important;
+        background-color: #262B3D !important;
+    }
+    li[data-baseweb="option"]:hover {
+        background-color: #3B4259 !important;
+    }
+
+    /* 상단 지표 카드 스타일 */
     div[data-testid="stMetric"] {
-        background: rgba(30, 34, 48, 0.65);
+        background: rgba(38, 43, 61, 0.75);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
         border-radius: 16px;
         padding: 18px 22px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     div[data-testid="stMetric"]:hover {
         transform: translateY(-4px);
-        border-color: rgba(168, 85, 247, 0.4);
-        box-shadow: 0 12px 28px rgba(168, 85, 247, 0.15);
+        border-color: rgba(192, 132, 252, 0.5);
+        box-shadow: 0 12px 28px rgba(192, 132, 252, 0.2);
     }
     
-    /* 지표 카드 내부 글씨 색상 조정 */
     div[data-testid="stMetricLabel"] {
-        color: #94A3B8 !important;
+        color: #CBD5E1 !important;
         font-weight: 600;
     }
     div[data-testid="stMetricValue"] {
-        color: #F8FAFC !important;
+        color: #FFFFFF !important;
         font-weight: 700;
     }
 
-    /* 하단 진단 박스: 프리미엄 카드 디자인 */
+    /* 하단 진단 박스 */
     .summary-card {
-        background: linear-gradient(135deg, rgba(35, 40, 58, 0.7) 0%, rgba(24, 28, 42, 0.8) 100%);
+        background: linear-gradient(135deg, rgba(38, 43, 61, 0.85) 0%, rgba(26, 29, 41, 0.9) 100%);
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(236, 72, 153, 0.25);
+        border: 1px solid rgba(244, 114, 182, 0.3);
         border-left: 6px solid #EC4899;
         padding: 22px 26px;
         border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
         margin-top: 30px;
         font-size: 1.08rem;
         line-height: 1.7;
-        color: #E2E8F0;
+        color: #F8FAFC !important;
+    }
+
+    /* [핵심] Plotly 피라미드 막대에 은은한 네온 글로우(Glow) 효과 적용 */
+    .js-plotly-plot .plotly .bars path {
+        filter: drop-shadow(0px 0px 5px rgba(129, 140, 248, 0.55));
+        transition: all 0.2s ease;
+    }
+    .js-plotly-plot .plotly .bars path:hover {
+        filter: drop-shadow(0px 0px 9px rgba(244, 114, 182, 0.85));
     }
     
-    /* 구분선 컬러 모던화 */
     hr {
-        border-color: rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(255, 255, 255, 0.12) !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -233,28 +267,34 @@ if not selected_data.empty:
 
 
     # --------------------------------------------------------------------------
-    # 9. Plotly 차트 (어두운 파스텔 스타일 적용)
+    # 9. Plotly 차트 (피라미드 색상 유지 + 빛나는 라인 외곽선 적용)
     # --------------------------------------------------------------------------
     fig = go.Figure()
 
-    # 남자 막대 - 파스텔 인디고 (#6366F1)
+    # 남자 막대 - 파스텔 인디고 (#6366F1) + 발광용 외곽선 (#A5B4FC)
     fig.add_trace(go.Bar(
         y=age_labels,
         x=male_x,
         name='남자',
         orientation='h',
-        marker_color='#6366F1',
+        marker=dict(
+            color='#6366F1',
+            line=dict(color='#818CF8', width=0.8)
+        ),
         customdata=male_counts,
         hovertemplate='<b>%{y}</b><br>남성 인구: %{customdata:,}명<extra></extra>'
     ))
 
-    # 여자 막대 - 파스텔 로즈 핑크 (#EC4899)
+    # 여자 막대 - 파스텔 로즈 핑크 (#EC4899) + 발광용 외곽선 (#F472B6)
     fig.add_trace(go.Bar(
         y=age_labels,
         x=female_x,
         name='여자',
         orientation='h',
-        marker_color='#EC4899',
+        marker=dict(
+            color='#EC4899',
+            line=dict(color='#F472B6', width=0.8)
+        ),
         customdata=female_counts,
         hovertemplate='<b>%{y}</b><br>여성 인구: %{customdata:,}명<extra></extra>'
     ))
@@ -262,34 +302,34 @@ if not selected_data.empty:
     fig.update_layout(
         title=dict(
             text=f"<b>[{selected_sido} {selected_sigungu} {selected_dong}]</b> 연령별 인구 분포",
-            font=dict(size=20, color="#F8FAFC")
+            font=dict(size=20, color="#FFFFFF")
         ),
         barmode='overlay',
         bargap=0.08,
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
         
-        # X축 디자인 (다크모드 맞춤)
+        # X축 디자인 (고대비 백색 폰트)
         xaxis=dict(
             title="<b>인구수 (명)</b>",
-            title_font=dict(color="#94A3B8"),
+            title_font=dict(color="#E2E8F0"),
             tickvals=x_vals,
             ticktext=x_texts,
-            tickfont=dict(color="#CBD5E1"),
-            gridcolor='rgba(255, 255, 255, 0.06)',
-            zerolinecolor='rgba(255, 255, 255, 0.2)',
+            tickfont=dict(color="#F1F5F9", size=11),
+            gridcolor='rgba(255, 255, 255, 0.08)',
+            zerolinecolor='rgba(255, 255, 255, 0.25)',
             zerolinewidth=1.5
         ),
         
-        # Y축 디자인 (0세 맨 아래, 100세 이상 맨 위 고정)
+        # Y축 디자인 (0세 맨 아래, 100세 이상 맨 위 고정 & 선명한 나이 글씨)
         yaxis=dict(
             title="<b>나이</b>",
-            title_font=dict(color="#94A3B8"),
+            title_font=dict(color="#E2E8F0"),
             type='category',
             categoryorder='array',
             categoryarray=age_labels,
-            tickfont=dict(color="#CBD5E1"),
-            gridcolor='rgba(255, 255, 255, 0.04)'
+            tickfont=dict(color="#F1F5F9", size=10),
+            gridcolor='rgba(255, 255, 255, 0.05)'
         ),
         
         # 범례 디자인
@@ -299,7 +339,7 @@ if not selected_data.empty:
             y=1.02,
             xanchor="center",
             x=0.5,
-            font=dict(size=14, color="#E2E8F0")
+            font=dict(size=14, color="#FFFFFF")
         ),
         
         height=950,
@@ -310,23 +350,23 @@ if not selected_data.empty:
 
 
     # --------------------------------------------------------------------------
-    # 10. 하단 자동 진단 요약 카드
+    # 10. 하단 자동 진단 요약 카드 (고대비 텍스트)
     # --------------------------------------------------------------------------
     if child_ratio > elderly_ratio:
         summary_text = (
-            f"👧👶 <b style='color:#6366F1;'>이 동네는 아이들이 상대적으로 많은 편입니다!</b><br>"
+            f"👧👶 <b style='color:#818CF8;'>이 동네는 아이들이 상대적으로 많은 편입니다!</b><br>"
             f"유소년(0~14세) 비율이 <b>{child_ratio:.1f}%</b>로, 고령 인구(65세 이상, <b>{elderly_ratio:.1f}%</b>)보다 더 높아서 "
             f"어린이와 가족 단위 인구가 많이 거주하는 활기찬 특성을 보입니다."
         )
     elif elderly_ratio >= 20.0:
         summary_text = (
-            f"👵👴 <b style='color:#EC4899;'>이 동네는 어르신들이 많이 거주하는 초고령화 지역입니다.</b><br>"
+            f"👵👴 <b style='color:#F472B6;'>이 동네는 어르신들이 많이 거주하는 초고령화 지역입니다.</b><br>"
             f"65세 이상 어르신 비율이 <b>{elderly_ratio:.1f}%</b>(20% 이상)로, 아이들(0~14세, <b>{child_ratio:.1f}%</b>)에 비해 "
             f"고령층 비중이 매우 높은 지역입니다."
         )
     elif elderly_ratio > child_ratio:
         summary_text = (
-            f"🏡👵 <b style='color:#A855F7;'>이 동네는 아이들보다 어르신 비율이 조금 더 높은 편입니다.</b><br>"
+            f"🏡👵 <b style='color:#C084FC;'>이 동네는 아이들보다 어르신 비율이 조금 더 높은 편입니다.</b><br>"
             f"65세 이상 어르신 비율(<b>{elderly_ratio:.1f}%</b>)이 유소년 비율(<b>{child_ratio:.1f}%</b>)보다 높아 "
             f"차분한 주거 환경의 특성을 보입니다."
         )
